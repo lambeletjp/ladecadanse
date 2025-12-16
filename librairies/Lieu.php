@@ -79,7 +79,16 @@ class Lieu extends Element
     {
         global $connectorPdo;
 
-        $params = [':region' => $filters['region'], ':statut' => $filters['statut']];
+        $params = [':region' => $filters['region']];
+
+        $statuts = is_array($filters['statut']) ? $filters['statut'] : [$filters['statut']];
+        $statutPlaceholders = [];
+        foreach ($statuts as $i => $statut) {
+            $key = ':statut' . $i;
+            $statutPlaceholders[] = $key;
+            $params[$key] = $statut;
+        }
+        $statutInClause = implode(', ', $statutPlaceholders);
 
         if (!empty($filters['nom']))
         {
@@ -110,7 +119,7 @@ class Lieu extends Element
           loc.commune AS loc_commune
         FROM lieu l
         JOIN localite loc ON l.localite_id = loc.id
-        WHERE l.statut = :statut";
+        WHERE l.statut IN ($statutInClause)";
 
         if (!empty($filters['nom']))
         {

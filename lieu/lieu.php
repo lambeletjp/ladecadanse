@@ -141,14 +141,16 @@ include("../_header.inc.php");
         <header id="entete_contenu">
 
             <h1 class="fn org">
-                <?= sanitizeForHtml($lieu['nom']); ?>
+                <?= sanitizeForHtml($lieu['nom']); ?><?php if ($lieu['statut'] === 'pause'): ?> ⏸️<?php endif; ?>
             </h1>
 
             <?php if ($lieu['logo']) : ?>
                 <a href="<?= Lieu::getWebPath(Lieu::getFilePath($lieu['logo']), isWithAntiCache: true) ?>" class="magnific-popup"><img src="<?= Lieu::getWebPath(Lieu::getFilePath($lieu['logo'], "s_"), isWithAntiCache: true) ?>" alt="Logo" class="logo" /></a>
             <?php endif; ?>
 
-            <?php if ($lieu['statut'] == 'ancien') : ?>
+            <?php if ($lieu['statut'] === 'pause') : ?>
+                <p class="alert-info"><strong>Ce lieu est actuellement en pause</strong></p>
+            <?php elseif ($lieu['statut'] === 'ancien') : ?>
                 <p class="alert-warn"><strong>Ce lieu n'existe plus</strong></p>
             <?php endif; ?>
             <div class="spacer"></div>

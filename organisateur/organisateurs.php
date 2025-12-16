@@ -23,7 +23,7 @@ if (isset($_GET['statut']) && Validateur::validateUrlQueryValue($_GET['statut'],
 {
    $_SESSION['user_prefs_orgas_statut'] = $_GET['statut'];
 }
-$filters['statut'] = $_SESSION['user_prefs_orgas_statut'];
+$filters['statut'] = $_SESSION['user_prefs_orgas_statut'] === 'actif' ? ['actif', 'pause'] : $_SESSION['user_prefs_orgas_statut'];
 
 $tab_order = ["date_ajout", "nom"];
 $_SESSION['user_prefs_orgas_order'] ??= 'date_ajout';
@@ -130,7 +130,7 @@ include("../_header.inc.php");
                             <?php endif; ?>
                         </td>
                         <td>
-                            <a href="/organisateur/organisateur.php?idO=<?= (int)$orga['idOrganisateur']; ?>"><strong><?= sanitizeForHtml($orga['nom']); ?></strong></a>
+                            <a href="/organisateur/organisateur.php?idO=<?= (int)$orga['idOrganisateur']; ?>"><strong><?= sanitizeForHtml($orga['nom']); ?><?php if ($orga['statut'] === 'pause'): ?> ⏸️<?php endif; ?></strong></a>
                         </td>
 
                         <td class="td-align-center<?php if (!empty($orgas_even[$orga['idOrganisateur']][0]['has_today_event']) ) { echo " ici"; } ?>">

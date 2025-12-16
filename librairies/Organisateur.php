@@ -61,7 +61,16 @@ class Organisateur extends Element
     {
         global $connectorPdo;
 
-        $params = [':statut' => $filters['statut']];
+        $params = [];
+
+        $statuts = is_array($filters['statut']) ? $filters['statut'] : [$filters['statut']];
+        $statutPlaceholders = [];
+        foreach ($statuts as $i => $statut) {
+            $key = ':statut' . $i;
+            $statutPlaceholders[] = $key;
+            $params[$key] = $statut;
+        }
+        $statutInClause = implode(', ', $statutPlaceholders);
 
         if (!empty($filters['nom']))
         {
@@ -78,7 +87,7 @@ class Organisateur extends Element
         $sql_event = "SELECT
           o.*
         FROM organisateur o
-        WHERE o.statut = :statut";
+        WHERE o.statut IN ($statutInClause)";
 
         if (!empty($filters['nom']))
         {

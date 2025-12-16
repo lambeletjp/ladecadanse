@@ -657,6 +657,18 @@ if (isset($_POST['formulaire']) && $_POST['formulaire'] === 'ok')
 			}
 		}
 
+		// Auto-activate lieu/organisateurs that are 'pause' when receiving a new event
+		if (!empty($champs['idLieu'])) {
+			$connector->query("UPDATE lieu SET statut = 'actif' WHERE idLieu = " . (int)$champs['idLieu'] . " AND statut = 'pause'");
+		}
+		if (isset($_POST['organisateurs']) && is_array($champs['organisateurs'])) {
+			foreach ($champs['organisateurs'] as $idOrg) {
+				if (!empty($idOrg)) {
+					$connector->query("UPDATE organisateur SET statut = 'actif' WHERE idOrganisateur = " . (int)$idOrg . " AND statut = 'pause'");
+				}
+			}
+		}
+
 		//affichage de la fiche de l'événement
 		$evenement = $champs;
 		//echo "get_ide :".$get['idE']." action:".$get['action'];

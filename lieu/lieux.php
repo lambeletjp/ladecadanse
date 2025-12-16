@@ -46,7 +46,7 @@ if (isset($_GET['statut']) && Validateur::validateUrlQueryValue($_GET['statut'],
 {
    $_SESSION['user_prefs_lieux_statut'] = $_GET['statut'];
 }
-$filters['statut'] = $_SESSION['user_prefs_lieux_statut'];
+$filters['statut'] = $_SESSION['user_prefs_lieux_statut'] === 'actif' ? ['actif', 'pause'] : $_SESSION['user_prefs_lieux_statut'];
 
 $tab_order = ["dateAjout", "nom"];
 $_SESSION['user_prefs_lieux_order'] ??= 'dateAjout';
@@ -183,7 +183,7 @@ include("../_header.inc.php");
                             <?php endif; ?>
                         </td>
                         <td>
-                            <a href="lieu.php?idL=<?= (int)$lieu['idLieu']; ?>" ><strong><?= sanitizeForHtml($lieu['nom']); ?></strong></a>
+                            <a href="lieu.php?idL=<?= (int)$lieu['idLieu']; ?>" ><strong><?= sanitizeForHtml($lieu['nom']); ?><?php if ($lieu['statut'] === 'pause'): ?> ⏸️<?php endif; ?></strong></a>
                             <?php  if (0) : // if (!empty($lieux_salles[$lieu['idLieu']])) : ?>
                                 <?php foreach ($lieux_salles[$lieu['idLieu']] as $s) : ?>
                                     <br><?= sanitizeForHtml($s['nom']) ?>

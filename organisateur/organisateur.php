@@ -145,11 +145,17 @@ include("../_header.inc.php");
 
         <header id="entete_contenu">
 
-            <h1 class="fn org"><?= $organisateur->getHtmlValue('nom'); ?></h1>
+            <h1 class="fn org"><?= $organisateur->getHtmlValue('nom'); ?><?php if ($organisateur->getValue('statut') === 'pause'): ?> ⏸️<?php endif; ?></h1>
 
             <?php if ($organisateur->getValue('logo') != '') : ?>
             <a href="<?= Organisateur::getWebPath(Organisateur::getFilePath($organisateur->getValue('logo')), isWithAntiCache: true) ?>" class="magnific-popup"><img src="<?= Organisateur::getWebPath(Organisateur::getFilePath($organisateur->getValue('logo'), "s_"), true) ?>" alt="Logo" class="logo" /></a>
             <?php endif ?>
+
+            <?php if ($organisateur->getValue('statut') === 'pause') : ?>
+                <p class="alert-info"><strong>Cet organisateur est actuellement en pause</strong></p>
+            <?php elseif ($organisateur->getValue('statut') === 'ancien') : ?>
+                <p class="alert-warn"><strong>Cet organisateur n'existe plus</strong></p>
+            <?php endif; ?>
             <div class="spacer"></div>
         </header>
 

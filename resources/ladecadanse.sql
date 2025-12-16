@@ -90,7 +90,7 @@ DROP TABLE IF EXISTS `lieu`;
 CREATE TABLE `lieu` (
   `idLieu` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
   `idpersonne` smallint(5) unsigned NOT NULL,
-  `statut` enum('actif','inactif','ancien') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `statut` enum('actif','pause','inactif','ancien') COLLATE utf8mb4_unicode_ci NOT NULL,
   `nom` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
   `adresse` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `quartier` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1219,7 +1219,7 @@ CREATE TABLE `organisateur` (
   `logo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `photo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `presentation` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `statut` enum('actif','inactif','ancien') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'actif',
+  `statut` enum('actif','pause','inactif','ancien') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'actif',
   `date_ajout` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `date_derniere_modif` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`idOrganisateur`)

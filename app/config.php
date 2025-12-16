@@ -78,7 +78,7 @@ $price_types = ['unknown' => 'inconnu', 'gratis' => 'entrée libre', 'asyouwish'
 $tab_tri_agenda = ["dateAjout", "horaire_debut"];
 
 //// PLACES
-$statuts_lieu = ['actif', 'ancien', 'inactif'];
+$statuts_lieu = ['actif', 'pause', 'ancien', 'inactif'];
 $glo_categories_lieux = ['bistrot' => 'bistrot', 'salle' => 'salle', 'restaurant' => 'restaurant', 'cinema' => 'cinéma', 'theatre' => 'théâtre', 'galerie' => 'galerie', 'boutique' => 'boutique', 'musee' => 'musée', 'autre' => 'autre'];
 
 $glo_tab_quartiers = [
