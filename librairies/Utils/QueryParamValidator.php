@@ -55,6 +55,30 @@ final class QueryParamValidator
     }
 
     /**
+     * Jour ISO issu de la query string, normalisé en AAAA-MM-JJ.
+     *
+     * Le mois et le jour sont acceptés sans zéro de tête : réunir les deux
+     * écritures évite deux URL pour la même journée. Jamais bloquant, comme
+     * pageFromQuery() : une date que le calendrier ne connaît pas (30 février)
+     * retombe sur $defaut au lieu d'être décalée par DateTime, et un 13e mois
+     * au lieu d'y lever une fatale.
+     */
+    public static function jourFromQuery(mixed $get, string $defaut): string
+    {
+        if (!is_scalar($get) || !preg_match("/^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})$/", trim((string) $get), $jour))
+        {
+            return $defaut;
+        }
+
+        if (!checkdate((int) $jour[2], (int) $jour[3], (int) $jour[1]))
+        {
+            return $defaut;
+        }
+
+        return sprintf("%04d-%02d-%02d", $jour[1], $jour[2], $jour[3]);
+    }
+
+    /**
      * Valide une valeur de query string selon le type attendu.
      *
      * @param mixed  $get    Valeur brute issue de $_GET

@@ -121,4 +121,37 @@ final class QueryParamValidatorTest extends Unit
         $this->assertSame(12, QueryParamValidator::pageFromQuery('abc', 12));
         $this->assertSame(2, QueryParamValidator::pageFromQuery('2', 12));
     }
+
+    public function testJourFromQueryNormalisesLeadingZeros(): void
+    {
+        $this->assertSame('2026-01-05', QueryParamValidator::jourFromQuery('2026-1-5', '2026-08-29'));
+    }
+
+    public function testJourFromQueryKeepsAnAlreadyIsoDay(): void
+    {
+        $this->assertSame('2026-12-25', QueryParamValidator::jourFromQuery('2026-12-25', '2026-08-29'));
+    }
+
+    public function testJourFromQueryTrimsSurroundingSpaces(): void
+    {
+        $this->assertSame('2026-12-25', QueryParamValidator::jourFromQuery('  2026-12-25 ', '2026-08-29'));
+    }
+
+    /**
+     * checkdate() écarte ce que la regex laisse passer : DateTime décalerait le 30 février au
+     * 2 mars, et lèverait sur un 13e mois.
+     */
+    public function testJourFromQueryFallsBackOnAnImpossibleDay(): void
+    {
+        $this->assertSame('2026-08-29', QueryParamValidator::jourFromQuery('2026-2-30', '2026-08-29'));
+        $this->assertSame('2026-08-29', QueryParamValidator::jourFromQuery('2026-13-45', '2026-08-29'));
+        $this->assertSame('2026-08-29', QueryParamValidator::jourFromQuery('2026-00-00', '2026-08-29'));
+    }
+
+    public function testJourFromQueryFallsBackOnGarbage(): void
+    {
+        $this->assertSame('2026-08-29', QueryParamValidator::jourFromQuery('', '2026-08-29'));
+        $this->assertSame('2026-08-29', QueryParamValidator::jourFromQuery('nimportequoi', '2026-08-29'));
+        $this->assertSame('2026-08-29', QueryParamValidator::jourFromQuery(['2026-12-25'], '2026-08-29'));
+    }
 }

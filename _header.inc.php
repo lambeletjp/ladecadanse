@@ -7,6 +7,9 @@ use Ladecadanse\UserLevel;
 // de sécurité, le verrou est purement au rendu : sans le script d'amorçage ci-dessous,
 // mouseless.js ne s'active jamais.
 $mouseless_allowed = isset($_SESSION['Sgroupe']) && (int) $_SESSION['Sgroupe'] <= UserLevel::ADMIN;
+
+// SITE_CANONICAL_URL et non $site_full_url, qui suit le schéma et l'hôte de la requête : c'est justement la duplication http/https et www/sans-www que la canonique doit réduire
+$page_url_absolue = isset($page_url) ? sanitizeForHtml(SITE_CANONICAL_URL . '/' . $page_url) : null;
 ?>
 
 <!doctype html>
@@ -19,7 +22,7 @@ $mouseless_allowed = isset($_SESSION['Sgroupe']) && (int) $_SESSION['Sgroupe'] <
     <?php
     // TODO: replace by a "page_robots_noindex" var in concerned page : index, event/send, etc.
     if (
-        ($nom_page == 'index' && isset($_GET['courant']) && ($_GET['courant'] < date("Y-m-d") || (isset($total_even) && $total_even == 0 && $_GET['courant'] > date('Y-m-d', strtotime('+1 year')))))
+        ($nom_page == 'index' && ($get['courant'] < $glo_auj_6h || (isset($total_even) && $total_even == 0 && $get['courant'] > date('Y-m-d', strtotime('+1 year')))))
         || in_array($nom_page, ['event/send', 'event/search'])
         ) : ?>
         <meta name="robots" content="noindex, nofollow">
@@ -35,11 +38,12 @@ $mouseless_allowed = isset($_SESSION['Sgroupe']) && (int) $_SESSION['Sgroupe'] <
     <meta property="og:locale" content="fr">
     <meta property="og:title" content="<?= sanitizeForHtml($page_titre) . " — La décadanse"; ?>">
     <meta property="og:description" content="<?= sanitizeForHtml(($page_description ?? '')) ?>">
-    <?php if (isset($page_url)) : ?>
-        <meta property="og:url" content="<?= $site_full_url . $page_url; ?>">
+    <?php if ($page_url_absolue !== null) : ?>
+        <link rel="canonical" href="<?= $page_url_absolue ?>">
+        <meta property="og:url" content="<?= $page_url_absolue ?>">
     <?php endif; ?>
     <?php if (!empty($page_image)) : ?>
-        <meta property="og:image" content="<?= $site_full_url . $page_image ?>">
+        <meta property="og:image" content="<?= sanitizeForHtml(SITE_CANONICAL_URL . '/' . ltrim($page_image, '/')) ?>">
 <!--        <meta property="og:image:alt" content="Affiche/flyer">-->
     <?php endif; ?>
 

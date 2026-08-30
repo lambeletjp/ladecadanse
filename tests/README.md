@@ -98,6 +98,8 @@ In `tests/.env` (copied from `tests/.env_model`), fill in:
 - `LADECADANSE_TEST_EVENT_ID_ACTOR_OWN` — an event whose author is the actor account
 - `LADECADANSE_TEST_EVENT_ID_FOREIGN` — an event the actor account may not edit
 - `LADECADANSE_TEST_EVENT_ID_ACTOR_OWN_PAST` — a **past** event whose author is the actor account
+- `LADECADANSE_SITE_CANONICAL_URL` — the `SITE_CANONICAL_URL` of the instance under test, without trailing slash. Only used to check that the canonical URL does not follow the requested host, which it proves best when it differs from `LADECADANSE_SITE_URL`
+- `LADECADANSE_TEST_LIEU_ID` — any existing lieu; only the shape of its canonical URL is checked, never its content
 - `LADECADANSE_TEST_LIEU_ID_WITH_PAST_EVENTS` — a lieu holding several past events, spread over several dates
 - `LADECADANSE_TEST_ORGA_ID_WITH_PAST_EVENTS` — an organisateur holding at least one past event
 - `LADECADANSE_TEST_LIEU_ID_WITH_LONG_TEXT` — a lieu whose description is long enough (over 550 characters) for the server to render it collapsed
@@ -120,6 +122,7 @@ Tests whose variables are left empty are reported as **skipped**, not failed.
 - `BotMonitoringCest` — honeypot (204, footer link, robots.txt)
 - `EvenementsPassesTriCest` — the sort menu of the "Passés" tab on the lieu and organisateur pages: which tab offers it, that both directions actually reorder the query, that either one lands on the most recent past events, and that the choice is remembered in session across both pages
 - `UserRegisterCest` — public registration: the form's guards (CSRF token, single use, honeypot, both affiliation selects), the password rules, an already taken login, and two malformed POSTs that used to raise a PHP warning (missing `organisateurs[]`, scalar fields posted as arrays). The "email already taken" branch — which renders the success message without inserting anything, to avoid email enumeration — is knowingly left uncovered: it would need a fixture address really present in the database, and a stale one would turn the test into an account creation
+- `CanonicalCest` — the canonical URL of each kind of page (issue #227): the parameters dropped as noise (`utm_`, `tri_agenda`), those kept because they carry a content of their own (the agenda's day, the page number of the listings, the period and page of a fiche), the day normalised and checked against the calendar, the `PATH_INFO` folded back onto its script, the host taken from `SITE_CANONICAL_URL` and not from the request, and the error page which declares none
 - `LieuTexteRepliableCest` — server-side contract of the collapsible descriptions: the text is served whole (never truncated in PHP), the toggle is a sibling of the capped block and wired to it by `aria-controls`, and the `js` marker that gates the whole collapse is in the `<head>`
 - `OrganisateurEditFormulaireCest` — the organisateur edit form (issue #115): the fields the JS and the processing depend on, the title that links back to the fiche, the "Publié / Dépublié" status labels, the fact that the status is offered to admins only, and that an actor may no longer edit someone else's fiche
 

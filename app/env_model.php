@@ -4,9 +4,10 @@
 define("ENV", "dev"); // or "prod"
 define("MODE_DEBUG", true); // display errors
 
-// URL canonique du site, sans slash final. Décommenter en développement pour que les balises
-// d'autodiscovery RSS et les liens vers les flux pointent sur cet environnement plutôt que sur
-// la production. Laissée commentée, app/config.php retient https://www.ladecadanse.ch
+// URL canonique du site, sans slash final. Sert les balises d'autodiscovery RSS, les liens vers
+// les flux, et le rel=canonical de toutes les pages : sur une autre installation que
+// ladecadanse.ch, la laisser commentée revient à désigner ladecadanse.ch comme version canonique
+// de chaque page. Laissée commentée, app/config.php retient https://www.ladecadanse.ch
 //define("SITE_CANONICAL_URL", 'http://localhost:7777');
 
 // database connection

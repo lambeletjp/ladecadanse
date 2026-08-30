@@ -33,6 +33,9 @@ if (isset($_GET['order']) && in_array($_GET['order'], $tab_order))
 
 $get['page'] = QueryParamValidator::pageFromQuery($_GET['page'] ?? '');
 
+// pagination réelle : chaque page se canonise sur elle-même, les filtres vivant en session
+$page_url = HtmlShrink::urlCanonique($page_url, ['page' => $get['page'] > 1 ? $get['page'] : null]);
+
 $orgas_page_current = Organisateur::getOrganisateurs($filters, $_SESSION['user_prefs_orgas_order'], $get['page']);
 $orgas_page_all = Organisateur::getOrganisateurs($filters, $_SESSION['user_prefs_orgas_order'], null);
 $all_results_nb = count($orgas_page_all);

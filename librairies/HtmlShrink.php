@@ -55,6 +55,23 @@ class HtmlShrink
     }
 
     /**
+     * URL propre d'une page : son script, et les seuls paramètres qui changent son contenu.
+     *
+     * Sert og:url et rel=canonical (#227). Un paramètre à null est omis, ce qui laisse chaque page
+     * exprimer sa valeur par défaut sans réécrire la query string, dont ce point unique fixe
+     * l'assemblage. Le résultat n'est pas échappé : _header.inc.php s'en charge à l'affichage.
+     *
+     * @param array<string, string|int|null> $params
+     */
+    public static function urlCanonique(string $script, array $params = []): string
+    {
+        $params = array_filter($params, static fn (string|int|null $valeur): bool => $valeur !== null);
+
+        // RFC3986 : l'espace devient %20 et non +, la forme attendue dans une URL déclarée aux moteurs
+        return $params === [] ? $script : $script . '?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
      * TODO: mv to a LieuRenderer
      */
     public static function adresseCompacteSelonContexte(?string $region, string $localite, string $quartier, string $adresse): string

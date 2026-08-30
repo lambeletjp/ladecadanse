@@ -151,7 +151,14 @@ if ($lieu['logo'])
 {
     $page_image = $assets->get(Lieu::getAssetPath(Lieu::getFilePath($lieu['logo'])));
 }
-$page_url = "lieu/lieu.php?idL=" .  $get['idL'];
+// la page retenue est celle réellement demandée : $get['page'] retombe sinon sur la dernière page,
+// qui varie avec le nombre d'événements passés et avec le sens de tri mémorisé en session
+$page_demandee = QueryParamValidator::pageFromQuery($_GET['page'] ?? '');
+$page_url = HtmlShrink::urlCanonique($page_url, [
+    'idL' => $get['idL'],
+    'periode' => $get['periode'] !== "futur" ? $get['periode'] : null,
+    'page' => $page_demandee > 1 ? $page_demandee : null,
+]);
 
 include("../_header.inc.php");
 ?>

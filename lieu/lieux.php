@@ -57,6 +57,9 @@ if (isset($_GET['order']) && in_array($_GET['order'], $tab_order))
 
 $get['page'] = QueryParamValidator::pageFromQuery($_GET['page'] ?? '');
 
+// pagination réelle : chaque page se canonise sur elle-même, les filtres vivant en session
+$page_url = HtmlShrink::urlCanonique($page_url, ['page' => $get['page'] > 1 ? $get['page'] : null]);
+
 // used to build localite filter Select (exclude localites without lieu)
 $lieux_region_localite_ids = array_values(array_unique(array_column(Lieu::getLieux(filters: ['region' => $filters['region'], 'statut' => $filters['statut']], page: null), 'localite_id')));
 

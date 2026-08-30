@@ -94,12 +94,24 @@ class SiteTester extends \Codeception\Actor
      */
     public function grabResponseHeader(string $name): string
     {
-        /** @var \Codeception\Module\PhpBrowser $browser */
-        $browser = $this->getScenario()->current('modules')['PhpBrowser'];
-
-        $value = $browser->client->getInternalResponse()->getHeader($name);
+        $value = $this->browser()->client->getInternalResponse()->getHeader($name);
 
         return is_array($value) ? (string) reset($value) : (string) $value;
+    }
+
+    /**
+     * Lit le code de statut de la dernière réponse, que PhpBrowser n'expose pas plus que les
+     * en-têtes : de quoi laisser un test constater qu'une page ne répond pas 200 au lieu d'échouer
+     * dessus, quand le comportement observé dépend de la configuration du serveur.
+     */
+    public function grabResponseCode(): int
+    {
+        return $this->browser()->client->getInternalResponse()->getStatusCode();
+    }
+
+    private function browser(): \Codeception\Module\PhpBrowser
+    {
+        return $this->getScenario()->current('modules')['PhpBrowser'];
     }
 
     /**

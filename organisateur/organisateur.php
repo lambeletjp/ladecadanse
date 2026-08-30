@@ -145,7 +145,14 @@ if ($organisateur->getValue('logo'))
     $page_image = $assets->get(Organisateur::getAssetPath(Organisateur::getFilePath($organisateur->getValue('logo'))));
 }
 
-$page_url = "organisateur/organisateur.php?idO=" .  $get['idO'];
+// la page retenue est celle réellement demandée : $get['page'] retombe sinon sur la dernière page,
+// qui varie avec le nombre d'événements passés et avec le sens de tri mémorisé en session
+$page_demandee = QueryParamValidator::pageFromQuery($_GET['page'] ?? '');
+$page_url = HtmlShrink::urlCanonique($page_url, [
+    'idO' => $get['idO'],
+    'periode' => $get['periode'] !== "futur" ? $get['periode'] : null,
+    'page' => $page_demandee > 1 ? $page_demandee : null,
+]);
 include("../_header.inc.php");
 ?>
 
