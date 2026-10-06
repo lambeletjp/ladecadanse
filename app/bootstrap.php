@@ -8,6 +8,7 @@ require_once __DIR__ . '/env.php';
 require __DIR__ . '/../vendor/autoload.php';
 
 use Ladecadanse\Evenement;
+use Ladecadanse\EventCategory;
 use Ladecadanse\Lieu;
 use Ladecadanse\Organisateur;
 use Ladecadanse\Security\Authorization;
@@ -81,8 +82,7 @@ if (!empty($_COOKIE['ladecadanse_tri_agenda']) && in_array($_COOKIE['ladecadanse
 {
     $_SESSION['user_prefs_agenda_order'] = $_COOKIE['ladecadanse_tri_agenda'];
 }
-// filtre de genre de l'agenda, 'tous' = aucun filtre
-$_SESSION['user_prefs_agenda_genre'] ??= 'tous';
+$_SESSION['user_prefs_agenda_genre'] ??= EventCategory::TAB_ALL;
 // tri des événements passés sur les fiches lieu et organisateur, partagé par les deux pages
 $_SESSION['user_prefs_past_events_order'] ??= 'asc';
 
