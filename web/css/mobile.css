@@ -40,7 +40,7 @@
 #menu ul li a
 {
     height:1.2em;
-    padding: 0.5em 0.3em;
+    padding: 0.7em 0.3em; /* le padding vertical est repris par les onglets ci-dessous */
     font-size: 1.03em; /* iphone <5 */
 }
 
@@ -52,18 +52,19 @@
  */
 #menu ul li#bouton_agenda a
 {
-    padding: 0.5em 0.55em;
+    padding: 0.7em 0.55em;
 }
 
 #menu ul li#bouton_calendrier a,
 #menu ul li#bouton_latests_events a,
 #menu ul li#bouton_favoris a
 {
-    padding: 0.5em 10px;
+    padding: 0.7em 10px;
 }
 
 /* en mobile, le marque-page remplace le libellé : l'onglet se lit comme le calendrier et la cloche */
-#menu ul li#bouton_favoris .fa-bookmark
+/* .fa et non .fa-bookmark : favorites.js passe l'icône en fa-bookmark-o sans favori */
+#menu ul li#bouton_favoris .fa
 {
     display:inline-block;
 }
@@ -114,6 +115,12 @@
         padding-right:0.25em;
     }
 
+    #menu ul li search a
+    {
+        padding-left:0.5em;
+        padding-right:0.25em;
+    }
+
     #menu ul li#bouton_agenda a
     {
         padding-left:0.4em;
@@ -124,8 +131,8 @@
     #menu ul li#bouton_latests_events a,
     #menu ul li#bouton_favoris a
     {
-        padding-left:8px;
-        padding-right:8px;
+        padding-left:9px; /* 10px font passer la loupe à la ligne en 360px */
+        padding-right:9px;
     }
 }
 
@@ -555,6 +562,48 @@ ul.menu_actions_evenement .calendar-export-wrapper .calendar-export-trigger
 ul.menu_action li a
 {
     padding: 0.5em;
+}
+
+/* les actions d'édition (copier, modifier, dépublier, auteur) prennent le même espacement
+   que celles de gauche : collées à 16px l'une de l'autre, elles étaient difficiles à taper.
+   La marge est réglée pour que l'écart entre icônes égale celui de gauche (~17px), l'espace
+   entre les <li> en ligne compris. */
+ul.menu_edition li
+{
+    margin: 0 0.05em;
+}
+
+ul.menu_edition li a
+{
+    padding: 0.5em;
+}
+
+/* même raison dans la colonne d'actions des agendas de lieu et d'organisateur : le padding
+   agrandit la zone de tap et écarte les icônes, la marge entre elles est réduite d'autant.
+   Les cinq icônes d'un compte qui peut éditer ne tiennent plus sur une ligne sans faire
+   déborder le tableau : elles passent à la ligne, trois puis deux, dans une colonne de
+   largeur fixe. */
+td.lieu_actions_evenement
+{
+    width: 86px;
+}
+
+td.lieu_actions_evenement > ul
+{
+    flex-wrap: wrap;
+}
+
+/* enfants directs : les entrées du menu calendrier gardent leur propre mise en forme */
+td.lieu_actions_evenement > ul > li
+{
+    margin-left: 0.2em;
+}
+
+td.lieu_actions_evenement > ul > li > a,
+td.lieu_actions_evenement .calendar-export-trigger
+{
+    display: inline-block;
+    padding: 0.4em;
 }
 
 .calendar-export-menu li a

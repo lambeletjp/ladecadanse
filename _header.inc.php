@@ -307,9 +307,7 @@ $mouseless_allowed = isset($_SESSION['Sgroupe']) && (int) $_SESSION['Sgroupe'] <
 
                 <ul>
                     <?php
-                    $menu_principal = Ladecadanse\Favorites::isEnabled()
-                        ? ["Agenda" => "index.php", "Favoris" => "favoris.php", "Lieux" => "lieu/lieux.php", "Organisateurs" => "organisateur/organisateurs.php"]
-                        : ["Agenda" => "index.php", "Lieux" => "lieu/lieux.php", "Organisateurs" => "organisateur/organisateurs.php"];
+                    $menu_principal = ["Agenda" => "index.php", "Favoris" => "favoris.php", "Lieux" => "lieu/lieux.php", "Organisateurs" => "organisateur/organisateurs.php"];
                     foreach ($menu_principal as $nom => $lien) {
                         $ici = '';
                         if (strstr((string) $_SERVER['PHP_SELF'], $lien)
@@ -328,7 +326,8 @@ $mouseless_allowed = isset($_SESSION['Sgroupe']) && (int) $_SESSION['Sgroupe'] <
                             <?= "<a href=\"/" . $lien . "?" . $url_query_region_et . "\">" . $nom . "</a>" ?>
                             </li>
                             <li id="bouton_calendrier">
-                                <a href="#" id="btn_calendrier" class="mobile" aria-label="Calendrier"><i class="fa fa-calendar" aria-hidden="true"></i></a>
+                                <?php // sur une page sans calendrier, le lien mène à celui de l'agenda, que global.js ouvre ?>
+                                <a href="/index.php?<?= $url_query_region_et ?>#ouvrir-calendrier" id="btn_calendrier" class="mobile" aria-label="Calendrier"><i class="fa fa-calendar" aria-hidden="true"></i></a>
                             </li>
                             <li id="bouton_latests_events">
                                 <a href="/index.php#latests_events"><i class="fa fa-bell" aria-hidden="true"></i></a>

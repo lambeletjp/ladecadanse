@@ -8,6 +8,7 @@ require_once __DIR__ . '/env.php';
 require __DIR__ . '/../vendor/autoload.php';
 
 use Ladecadanse\Evenement;
+use Ladecadanse\EventCategory;
 use Ladecadanse\Lieu;
 use Ladecadanse\Organisateur;
 use Ladecadanse\Security\Authorization;
@@ -27,20 +28,6 @@ use Ladecadanse\Utils\AssetManager;
 require_once __DIR__ . '/config.php';
 
 date_default_timezone_set(DATE_DEFAULT_TIMEZONE);
-
-if (isset($_GET['favoris_beta']))
-{
-    if ($_GET['favoris_beta'] === FAVORITES_BETA_SECRET)
-    {
-        setcookie('favoris_beta', '1', ['expires' => time() + 31536000, 'path' => '/', 'samesite' => 'Lax']);
-        $_COOKIE['favoris_beta'] = '1';
-    }
-    elseif ($_GET['favoris_beta'] === 'off')
-    {
-        setcookie('favoris_beta', '', ['expires' => time() - 3600, 'path' => '/']);
-        unset($_COOKIE['favoris_beta']);
-    }
-}
 
 if (ENV === 'dev') {
     $whoops = new \Whoops\Run;
@@ -77,12 +64,11 @@ $regionConfig->setPersistentRegion($_COOKIE, $_GET);
 [$url_query_region, $url_query_region_et, $url_query_region_1er] = $regionConfig->getAppVars();
 
 $_SESSION['user_prefs_agenda_order'] = $_SESSION['user_prefs_agenda_order'] ?? 'dateAjout';
-if (!empty($_COOKIE['ladecadanse_tri_agenda']) && in_array($_COOKIE['ladecadanse_tri_agenda'], $tab_tri_agenda, true))
+if (!empty($_COOKIE['ladecadanse_tri_agenda']) && in_array($_COOKIE['ladecadanse_tri_agenda'], array_keys($tab_tri_agenda), true))
 {
     $_SESSION['user_prefs_agenda_order'] = $_COOKIE['ladecadanse_tri_agenda'];
 }
-// filtre de genre de l'agenda, 'tous' = aucun filtre
-$_SESSION['user_prefs_agenda_genre'] ??= 'tous';
+$_SESSION['user_prefs_agenda_genre'] ??= EventCategory::TAB_ALL;
 // tri des événements passés sur les fiches lieu et organisateur, partagé par les deux pages
 $_SESSION['user_prefs_past_events_order'] ??= 'asc';
 

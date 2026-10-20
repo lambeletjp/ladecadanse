@@ -142,15 +142,12 @@ export const Favorites =
         }
 
         const config = window.__LADECADANSE || {};
-        if (!config.favoritesEnabled)
-        {
-            return;
-        }
 
         this._bindEvents();
         await FavoritesStore.init(!!config.isLoggedIn, config.favoriteIds, config.csrfToken);
 
         this._hydrateButtons();
+        this._syncMenuIcon();
         this._construireBarreMois();
         this._loadGuestFavorisPage();
         this._applyFavorisFilter();
@@ -205,6 +202,15 @@ export const Favorites =
         $btn.find('i.fa').toggleClass('fa-bookmark', isFavorite).toggleClass('fa-bookmark-o', !isFavorite);
     },
 
+    // le marque-page du menu (visible en mobile) est vide tant qu'aucun favori n'est posé
+    _syncMenuIcon: function syncMenuIcon()
+    {
+        const hasAny = FavoritesStore.getAll().length > 0;
+        $('#bouton_favoris i.fa')
+            .toggleClass('fa-bookmark', hasAny)
+            .toggleClass('fa-bookmark-o', !hasAny);
+    },
+
     _hydrateButtons: function hydrateButtons()
     {
         const self = this;
@@ -229,6 +235,7 @@ export const Favorites =
             const eventId = $btn.data('event-id');
             const isNowFavorite = await FavoritesStore.toggle(eventId);
             self._setButtonState($btn, isNowFavorite);
+            self._syncMenuIcon();
             self._renderFilter();
         });
 
@@ -414,18 +421,83 @@ export const Favorites =
             $(this).toggle(!favorisMode || isFav);
         });
 
+        const previousCount = this._favCount;
+        this._favCount = favInList;
+
+        // un favori remis pendant que l'onglet se rétracte : il reste affiché
+        clearTimeout(this._hideTimer);
+        $('.js-favoris-filter-item').removeClass('plop-inverse');
+
         if (favInList === 0)
         {
-            $nav.attr('hidden', 'hidden');
             this._displayFilter = 'tous';
             $events.show();
             this._syncGroupHeaders(false);
+
+            if (previousCount > 0 && this._animate())
+            {
+                $('.js-favoris-filter-item').addClass('plop-inverse');
+                this._hideTimer = setTimeout(() =>
+                {
+                    $nav.attr('hidden', 'hidden');
+                    $('.js-favoris-filter-item').removeClass('plop-inverse');
+                }, 250);
+                return;
+            }
+
+            $nav.attr('hidden', 'hidden');
             return;
         }
 
         $nav.removeAttr('hidden');
+        this._renderCount(previousCount, favInList);
         this._markActiveTab(this._displayFilter);
         this._syncGroupHeaders(favorisMode);
+    },
+
+    // nombre de favoris de la liste affichée ; null tant que la page n'a pas été rendue une fois
+    _favCount: null,
+
+    _hideTimer: null,
+
+    _animate: function animate()
+    {
+        return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    },
+
+    /*
+     * Au chargement, le compteur s'affiche sans effet. Ensuite, l'onglet qui apparaît avec le
+     * premier favori rebondit, et à chaque changement le nouveau nombre remplace l'ancien en
+     * fondu. Les durées des minuteries sont celles des animations de global.css.
+     */
+    _renderCount: function renderCount(previous, count)
+    {
+        const $counter = $('.js-favoris-count');
+        const animate = previous !== null && this._animate();
+
+        if (!animate || previous === 0)
+        {
+            $counter.empty().append($('<span>').text(count));
+            if (animate)
+            {
+                const $item = $('.js-favoris-filter-item').addClass('plop');
+                setTimeout(() => $item.removeClass('plop'), 400);
+            }
+            return;
+        }
+
+        if (previous === count)
+        {
+            return;
+        }
+
+        // un clic rapide peut trouver un chiffre encore en train de sortir : il part tout de suite
+        $counter.children('.sort').remove();
+        // retrait à la durée de l'animation (global.css) plutôt qu'à animationend : un onglet
+        // en arrière-plan ne l'émet pas, et l'ancien chiffre resterait sous le nouveau
+        const $old = $counter.children().removeClass('entre').addClass('sort');
+        setTimeout(() => $old.remove(), 300);
+        $counter.append($('<span class="entre">').text(count));
     },
 
     _applyFavorisFilter: function applyFavorisFilter()
@@ -443,12 +515,46 @@ export const Favorites =
         {
             $genres.show();
             $monthRows.show();
+            $genres.find('p.rappel_date').show();
+            this._syncGenreJumps(false);
             return;
         }
 
         $genres.each(function ()
         {
             $(this).toggle($(this).find('article.evenement-short:visible').length > 0);
+        });
+
+        this._syncGenreJumps(true);
+
+        // Les rappels de date (ou d'heure) d'une section se suivaient une fois les événements
+        // masqués. Seul le dernier avant un événement visible reste — en ordre chronologique,
+        // c'est celui qui porte la bonne heure —, et aucun avant le premier ni après le dernier.
+        $genres.each(function ()
+        {
+            let seenVisibleEvent = false;
+            let $pending = $();
+
+            $(this).find('p.rappel_date, article.evenement-short').each(function ()
+            {
+                const $el = $(this);
+                if ($el.is('p.rappel_date'))
+                {
+                    $el.hide();
+                    $pending = $el;
+                    return;
+                }
+
+                if ($el.is(':visible'))
+                {
+                    if (seenVisibleEvent)
+                    {
+                        $pending.show();
+                    }
+                    seenVisibleEvent = true;
+                    $pending = $();
+                }
+            });
         });
 
         $monthRows.each(function ()
@@ -465,6 +571,45 @@ export const Favorites =
                 $row = $row.next();
             }
             $(this).toggle(hasVisible);
+        });
+    },
+
+    /*
+     * Le lien « genre suivant » de l'agenda visait une section que le filtre a pu masquer : il
+     * pointe sur la prochaine section visible, ou disparaît s'il n'y en a plus. La cible et le
+     * libellé d'origine sont gardés pour être rendus quand le filtre est retiré.
+     */
+    _syncGenreJumps: function syncGenreJumps(favorisMode)
+    {
+        $('#prochains_evenements section.genre a.genre-jump').each(function ()
+        {
+            const $link = $(this);
+            const labelNode = this.firstChild;
+
+            if ($link.data('original-href') === undefined)
+            {
+                $link.data('original-href', $link.attr('href'));
+                $link.data('original-label', labelNode.nodeValue);
+            }
+
+            if (!favorisMode)
+            {
+                $link.attr('href', $link.data('original-href')).show();
+                labelNode.nodeValue = $link.data('original-label');
+                return;
+            }
+
+            const $nextTitle = $link.closest('section.genre').nextAll('section.genre:visible').first().find('h2');
+            if ($nextTitle.length === 0)
+            {
+                $link.hide();
+                return;
+            }
+
+            // le titre porte le libellé avec majuscule initiale, le lien sans
+            const title = $nextTitle.text();
+            $link.attr('href', '#' + $nextTitle.attr('id')).show();
+            labelNode.nodeValue = title.charAt(0).toLowerCase() + title.slice(1) + ' ';
         });
     }
 };

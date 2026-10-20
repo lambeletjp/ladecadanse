@@ -27,6 +27,9 @@ use Ladecadanse\Utils\WebLink;
  */
 class EvenementRenderer
 {
+    /** Largeur des vignettes des listes compactes : derniers ajoutés, tableaux de lieu et d'organisateur. */
+    public const int SMALL_FIGURE_WIDTH = 60;
+
     /**
      * Plafond de charge utile de la description d'une carte d'événement.
      * La hauteur du bloc, elle, est plafonnée par le line-clamp de global.css.
@@ -470,11 +473,7 @@ class EvenementRenderer
 
     public static function favoriteButtonHtml(int $idEvenement, bool $isFavorite = false, string $label = ''): string
     {
-        if (!Favorites::isEnabled())
-        {
-            return '';
-        }
-        $icon = $isFavorite ? 'fa-bookmark' : 'fa-bookmark-o';
+        $icon =$isFavorite ? 'fa-bookmark' : 'fa-bookmark-o';
         $title = $isFavorite ? 'Retirer des favoris' : 'Favori';
         $labelHtml = $label !== '' ? '&nbsp;' . $label : '';
         return '<a href="#" class="js-favorite-toggle favorite-btn' . ($isFavorite ? ' is-favorite' : '') . '" data-event-id="' . $idEvenement . '" title="' . $title . '"><i class="fa ' . $icon . ' fa-lg"></i>' . $labelHtml . '</a>';
@@ -486,6 +485,8 @@ class EvenementRenderer
      */
     public static function favoritesListHtml(array $events): array
     {
+        global $site_full_url;
+
         $html = '';
         $months = [];
         $lastDate = null;
@@ -511,7 +512,9 @@ class EvenementRenderer
             $html .= self::eventShortArticleHtml($tab_even);
             $html .= '<footer class="edition"><ul class="menu_action">'
                 . '<li><a href="/event/send.php?action=report&idE=' . (int) $tab_even['e_idEvenement'] . '" class="signaler" title="Signaler une erreur"><i class="fa fa-flag-o fa-lg"></i></a></li>'
-                . '<li><a href="/event/to-ics.php?idE=' . (int) $tab_even['e_idEvenement'] . '" class="ical" title="Exporter au format iCalendar dans votre agenda"><i class="fa fa-calendar-plus-o fa-lg"></i></a></li>'
+                // le même menu que dans l'agenda : un simple lien vers le .ics ne faisait rien de
+                // visible sur un téléphone
+                . EvenementCalendarRenderer::renderMenuHtml($tab_even, $site_full_url, compact: true)
                 . '<li>' . self::favoriteButtonHtml((int) $tab_even['e_idEvenement'], true) . '</li>'
                 . '</ul><div class="spacer"></div></footer></article>';
         }
@@ -672,7 +675,6 @@ class EvenementRenderer
 
         $isFutureEvent = $tab_even['e_dateEvenement'] >= $glo_auj_6h;
         $isAllowedToEdit = $authorization->isPersonneAllowedToEditEvenement($_SESSION, $tab_even);
-        $isFavoritesEnabled = Favorites::isEnabled();
 
         $dtstart_iso = self::dtstartIso($tab_even['e_dateEvenement'], $tab_even['e_horaire_debut']);
 
@@ -707,7 +709,7 @@ class EvenementRenderer
                 <span class="pratique"><?= self::schedulesToHhMm($tab_even['e_horaire_debut'], $tab_even['e_horaire_fin'], $tab_even['e_dateEvenement']) ?></span>
             </td>
             <td class="flyer photo">
-                <?= self::mainFigureHtml($tab_even['e_flyer'], $tab_even['e_image'], $tab_even['e_titre'], 60) ?>
+                <?= self::mainFigureHtml($tab_even['e_flyer'], $tab_even['e_image'], $tab_even['e_titre'], self::SMALL_FIGURE_WIDTH) ?>
             </td>
             <td>
                 <a class="url" href="/event/evenement.php?idE=<?= (int)$tab_even['e_idEvenement']?>">
@@ -719,15 +721,12 @@ class EvenementRenderer
                 <?= $location ?>
                 <?php if ($location_masquee !== '') : ?><span class="visually-hidden"><?= sanitizeForHtml($location_masquee) ?></span><?php endif; ?>
             </td>
-            <?php if ($isFutureEvent || $isFavoritesEnabled || $isAllowedToEdit) : ?>
             <td class="lieu_actions_evenement">
                 <ul>
                     <?php if ($isFutureEvent) : ?>
                         <?= EvenementCalendarRenderer::renderMenuHtml($tab_even, $site_full_url, compact: true) ?>
                     <?php endif; ?>
-                    <?php if ($isFavoritesEnabled) : ?>
-                        <li><?= self::favoriteButtonHtml((int) $tab_even['e_idEvenement']) ?></li>
-                    <?php endif; ?>
+                    <li><?= self::favoriteButtonHtml((int) $tab_even['e_idEvenement']) ?></li>
                     <?php if ($isAllowedToEdit) : ?>
                         <li><a href="/event/copy.php?idE=<?= (int) $tab_even['e_idEvenement'] ?>" title="Copier cet événement"><?= $iconeCopier ?></a></li>
                         <?php if ($authorization->isPersonneAllowedToEditEvenementNow($_SESSION, $tab_even)) : ?>
@@ -738,7 +737,6 @@ class EvenementRenderer
                 </ul>
 
             </td>
-            <?php endif; ?>
         </tr>
 
         <?php

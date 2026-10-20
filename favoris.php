@@ -11,14 +11,7 @@ require_once("app/bootstrap.php");
 
 use Ladecadanse\Evenement;
 use Ladecadanse\EvenementRenderer;
-use Ladecadanse\Favorites;
 use Ladecadanse\HtmlShrink;
-
-if (!Favorites::isEnabled())
-{
-    header('Location: /');
-    exit;
-}
 
 $page_titre = "Favoris";
 $page_description = "Mes événements favoris";
@@ -165,6 +158,9 @@ include("_header.inc.php");
 </main>
 
 <aside id="colonne_gauche" class="colonne">
+    <?php // le bouton calendrier du menu mobile l'affiche ; sans lui, il ne faisait rien ?>
+    <?php include("event/_navigation_calendrier.inc.php"); ?>
+
     <?php
     /*
      * Sans mois à lister, le bloc ne montrerait que son fond gris arrondi : il reste masqué.

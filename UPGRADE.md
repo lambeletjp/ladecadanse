@@ -19,7 +19,7 @@ LADECADANSE_DB=prod composer db:migrate   # demande confirmation avant d'écrire
 
 Sous PowerShell : `$env:LADECADANSE_DB='prod'; composer db:migrate`. L'entrée `prod` de `app/db.config.php` sert telle quelle ; son compte doit avoir les droits `ALTER`, `CREATE`, `INDEX` et `DROP`, sinon lui substituer `migration_user` et `migration_password` (voir `app/db.config_model.php`).
 
-Le premier passage **adopte la base** : chaque migration antérieure à Doctrine vérifie d'abord si son effet est déjà en place — la colonne, l'index, la table ou la ligne qu'elle crée — et, le cas échéant, s'enregistre sans rien exécuter. Doctrine l'accompagne d'un avertissement « did not result in any SQL statements », attendu. Une production en 3.12.0 voit ainsi les dix migrations jusqu'à la 3.12.0 enregistrées à vide, et les sept de la 3.13.0 réellement passées, dans l'ordre :
+Le premier passage **adopte la base** : chaque migration antérieure à Doctrine vérifie d'abord si son effet est déjà en place — la colonne, l'index, la table ou la ligne qu'elle crée — et, le cas échéant, s'enregistre sans rien exécuter. Doctrine l'accompagne d'un avertissement « did not result in any SQL statements », attendu. Une production en 3.12.0 voit ainsi les dix migrations jusqu'à la 3.12.0 enregistrées à vide, et les neuf de la 3.13.0 réellement passées, dans l'ordre :
 
 1. `Version20260905000000` (ancien `v3-13-0_lieu-colonnes.sql`) remanie les colonnes de la table `lieu` :
     1. `determinant` devient `preposition_nom` et passe après `nom` — « au », « chez », « à l' » sont des prépositions, pas des déterminants ;
@@ -61,13 +61,15 @@ La marche à suivre, une fois :
       AND NOT EXISTS (SELECT 1 FROM descriptionlieu d WHERE d.idPersonne = personne.idPersonne AND d.dateAjout > DATE_SUB(CURDATE(), INTERVAL 3 YEAR));
     ```
 
-3. **Envoyer par `admin/mailing.php`**, par lots de 50. Le message doit porter la mention de l'anonymisation à venir : il tient alors lieu d'avertissement, et il n'y en aura pas d'autre. Compter une à deux minutes par lot, et 110 lots. Reprendre une séance interrompue dans l'heure : la session expire au-delà et le mailing en cours est perdu.
+3. **Envoyer par `admin/mailing.php`**, par lots de 100, sur plusieurs jours. Le message doit porter la mention de l'anonymisation à venir : il tient alors lieu d'avertissement, et il n'y en aura pas d'autre. La connexion SMTP reste ouverte le temps d'un lot ; chronométrer le premier, et baisser `MAILING_LOT` si l'hébergeur coupe la requête. Reprendre une séance interrompue dans l'heure : la session expire au-delà et le mailing en cours est perdu. Prévenir Infomaniak de ce volume ponctuel.
 
-4. **Marquer les comptes servis**, avec exactement le même `WHERE` que l'export :
+4. **Marquer les comptes servis**, par la liste des `idPersonne` de l'export, **pas en rejouant son `WHERE`** :
 
     ```sql
-    UPDATE personne SET inactivity_notified_at = NOW() WHERE … /* le WHERE ci-dessus */;
+    UPDATE personne SET inactivity_notified_at = NOW() WHERE idPersonne IN (/* les id de l'export */);
     ```
+
+    Le `WHERE` dépend de `CURDATE()` : rejoué des jours après l'export, il attraperait les comptes qui ont franchi les trois ans entretemps. Ils seraient marqués sans avoir rien reçu, puis anonymisés trente jours plus tard sans avertissement. Un mailing abandonné en route ne marque que les comptes effectivement traités : chaque envoi est journalisé avec son identifiant (`[admin-mailing]`, clé `idP`). Un envoi en échec compte comme servi, comme pour le canal automatique. Le même `UPDATE … IN` vaut si l'envoi passe par un autre outil que `admin/mailing.php`.
 
     Sans cette étape, le canal automatique réavertirait ces 5 464 comptes une fois mis en route.
 
@@ -78,6 +80,10 @@ L'écran [admin/inactive-accounts.php](admin/inactive-accounts.php) donne la lis
 La septième, `Version20261003000000`, ajoute six colonnes à `bot_monitor`, la table du suivi des bots (voir [docs/bots.md](docs/bots.md)) : la fenêtre de comptage en cours (`window_start`, `window_hits`), le plus fort pic de l'IP (`peak_hits`, `peak_start`), et ses requêtes terminées en erreur (`error_hits`, `last_error_path`). Elle suppose la table créée par `Version20260716000000`, que `db:migrate` passe avant elle — une production sans la table reçoit les deux d'un coup.
 
 **À passer avant la mise en ligne du code**, que le suivi soit activé ou non au moment de la mise à jour : les six colonnes ont un défaut, l'ancien code les ignore donc sans dommage. L'inverse ne vaut pas. Avec `BOT_MONITORING_ENABLED` à `true` et la base en retard, aucune page ne tombe — l'échec est rattrapé — mais plus aucune visite n'est comptée, et **chaque page vue écrit un warning dans le log**. Les lignes existantes gardent leurs compteurs de fenêtre à zéro jusqu'à la prochaine visite de leur IP ; rien n'est recalculé. `bot_monitor` est en InnoDB : pas de verrou d'écriture, l'`ALTER` est l'affaire d'un instant.
+
+La huitième, `Version20261006000000`, crée la table `remember_token` : un jeton « Rester connecté-e » par appareil, là où `personne.cookie` n'en gardait qu'un par compte (voir [docs/comptes.md](docs/comptes.md#rester-connecté-e)). **À passer avant la mise en ligne du code** : l'ancien code ignore la table, le nouveau la lit à chaque retour par le cookie et répondrait sinon par une erreur SQL. `personne.cookie` reste en place, inerte, jusqu'à une migration ultérieure.
+
+La neuvième, `Version20261006120000`, ajoute `personne.session_epoch`, le compteur qui permet à « Se déconnecter des autres appareils » de fermer les sessions ouvertes ailleurs. **À passer avant la mise en ligne du code**, qui lit la colonne à chaque page vue d'une personne connectée. Les sessions ouvertes avant la mise à jour survivent : elles n'ont pas la valeur en session, lue comme 0, le défaut. L'`ALTER` reconstruit `personne` (MyISAM), quelques centaines de lignes.
 
 ### Redirections
 
@@ -106,6 +112,7 @@ Rien à passer en base : `evenement.genre` est un `varchar(20)`, il accueille le
 
 ### Effets de bord à connaître
 
+- **Une reconnexion pour les appareils mémorisés** — les cookies « Rester connecté-e » posés avant la mise à jour ne sont plus reconnus : chaque personne qui avait coché la case se retrouve déconnectée une fois, et la recoche. Changer son mot de passe déconnecte désormais aussi les autres appareils mémorisés, ce qu'il ne faisait pas
 - **Comptes sans connexion depuis trois ans**, une fois `ACCOUNT_RETENTION_ENABLED` posée — ils reçoivent un avertissement, puis sont anonymisés un mois plus tard : nom d'utilisateur, adresse, affiliation et préférences effacés, rattachements aux lieux et organisateurs supprimés, sans retour possible. Leurs événements et descriptions restent publiés, détachés de leur auteur. Les administrateurs sont hors du décompte, et une connexion — y compris par le cookie « rester connecté-e » — rend son délai complet au compte. Un avertissement qui rebondit sur une adresse morte n'empêche pas l'anonymisation
 - **« Concerts » ouverte à tous dès la mise en ligne**, sans rien régler. Un événement classé `concerts` pendant la préversion apparaît sous « Concerts » pour tout le monde ; le titre de ses articles RSS dit « concerts » là où il disait « fête », et l'API ne le renvoie plus pour `category=fête` mais pour `category=concerts`
 - **Ancres des sections de l'agenda** — elles passent par `Text::slug()`, qui met en minuscules et remplace tout caractère non alphanumérique par un tiret, là où `stripAccents()` ne retirait que les diacritiques. Les cinq ancres existantes (`#fetes`, `#cine`, `#theatre`, `#expos`, `#divers`) ne bougent pas ; seule « cours/ateliers/stages » en avait besoin, son libellé portant des barres obliques
@@ -117,7 +124,7 @@ Rien à passer en base : `evenement.genre` est un `varchar(20)`, il accueille le
 - **Sélection des lieux actifs** — les trois selects de lieux (inscription, profil, texte d'un lieu) filtraient sur `actif=1`, colonne que la migration supprime ; c'est `statut` qui fait foi. Le code et la base partent donc ensemble : l'ancien code sur une base migrée répondrait une erreur SQL sur ces trois pages
 - **Affiliés et membres d'une fiche** — les personnes affiliées à un lieu et les membres d'un organisateur, avec leur e-mail, ne sont plus listés qu'aux administrateurs (niveau ADMIN). Un auteur ne voit plus les affiliés d'un lieu, et ni l'auteur d'une fiche d'organisateur ni ses membres ne voient plus la liste des membres
 - **Annonces déjà fermées** — la fermeture d'une annonce n'est plus lue dans les cookies `home_tmp_banner` et `home_tmp_back_banner` mais dans le stockage local du navigateur : une annonce reportée telle quelle réapparaît une fois chez ceux qui l'avaient fermée. Les deux cookies ne sont plus posés et expirent d'eux-mêmes
-- **Favoris réservés à un panel** — rien n'en paraît tant qu'on ne détient pas le cookie posé par `?favoris_beta=<secret>`, `FAVORITES_BETA_SECRET` dans [`app/config.php`](app/config.php) ; `?favoris_beta=off` le retire, et il vaut un an. Distribuer le lien, c'est ouvrir la fonctionnalité à qui le reçoit, y compris sans compte : le secret est dans un dépôt public, il ne protège de rien, il met simplement à l'écart. Les favoris d'un visiteur non connecté vivent dans le stockage local de son navigateur, sur cet appareil seulement — vider les données du site les efface —, et sa première connexion les verse au compte
+- **Favoris ouverts à tous** — l'onglet « Favoris » apparaît dans le menu principal, et un marque-page sous chaque événement. Les favoris d'un visiteur non connecté vivent dans le stockage local de son navigateur, sur cet appareil seulement — vider les données du site les efface —, et sa première connexion les verse au compte
 - **Propositions anonymes de plus de deux ans** — un administrateur qui rouvre un tel événement n'y voit plus ni l'adresse ni la remarque du visiteur, et ne peut plus lui notifier une modification : l'une et l'autre ont été purgées
 
 ### Bibliothèques front-end

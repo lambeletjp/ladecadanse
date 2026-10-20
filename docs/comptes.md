@@ -1,6 +1,6 @@
 # Comptes
 
-Les quatre pages de compte — connexion, inscription, réinitialisation du mot de passe, déconnexion — vivent sous `user/`, avec le profil (`user/dashboard.php`). Elles partagent la même mécanique : traitement complet avant la première ligne de HTML, jeton de formulaire comparé par `hash_equals()`, pot de miel, erreurs rassemblées dans un récapitulatif en haut de page et champs fautifs marqués `champ_errone` / `aria-invalid`. La feuille `web/css/compte.css` leur donne largeur, centrage et grille libellé/champ communes.
+Les quatre pages de compte — connexion, inscription, réinitialisation du mot de passe, déconnexion — vivent sous `user/`, avec le profil (`user/dashboard.php`). Elles partagent la même mécanique : traitement complet avant la première ligne de HTML, jeton de formulaire comparé par `hash_equals()` — une soumission sans jeton est refusée même quand la session n'en porte pas encore, deux chaînes vides n'étant plus tenues pour égales (`SecurityToken::check()`) —, pot de miel, erreurs rassemblées dans un récapitulatif en haut de page et champs fautifs marqués `champ_errone` / `aria-invalid`. La feuille `web/css/compte.css` leur donne largeur, centrage et grille libellé/champ communes.
 
 | Page | Fichier |
 | --- | --- |
@@ -35,12 +35,34 @@ Une demande (`user/reset.php`) n'aboutit que pour un compte **actif**, c'est-à-
 
 Le message affiché est le même dans tous les cas — compte trouvé ou non, actif ou non. La page ne dit jamais si un compte existe.
 
-Le lien reçu vaut **24 h**. Sur `user/reset2.php` :
+Le lien reçu vaut **24 h**. Son jeton vient de `random_bytes(32)`. Jusqu'à la 3.13.0, c'était un sha256 calculé sur un sel écrit en dur dans ce dépôt public, une graine que l'attaquant connaît — l'adresse ou le nom d'utilisateur visé — et `random_int(0, 1000)` pour tout aléa : un millier de valeurs à essayer en 24 h, sans limitation sur `reset2.php`, suffisait à prendre un compte dont on connaissait l'adresse.
+
+Sur `user/reset2.php` :
 
 - la liste des comptes réinitialisables est établie une fois, avant le traitement, pour les deux formes de demande (par identifiant ou par email) ; affichage et contrôle du POST lisent la même liste et ne peuvent pas diverger ;
 - un candidat unique s'impose de lui-même, sans champ caché à falsifier. Le choix n'est demandé — donc l'erreur possible — que si plusieurs comptes actifs partagent l'adresse ;
 - liste vide (compte désactivé entre la demande et le clic) : message explicite, pas de formulaire ;
 - jeton absent, mal formé (lien coupé par un client de messagerie) ou expiré : « demande invalide ». Ces trois cas se valent, et aucun ne lève d'erreur.
+
+## Rester connecté-e
+
+La case du formulaire de connexion pose le cookie `ladecadanse_remember`, valable **30 jours** et prolongé à chaque retour. Chaque appareil a son jeton, une ligne de la table `remember_token` (`Ladecadanse\Security\RememberTokens`) : se connecter sur le téléphone ne déconnecte plus l'ordinateur, ce que faisait l'ancienne colonne unique `personne.cookie`.
+
+Le cookie porte `selector:validator`. Le selector retrouve la ligne ; du validator, la table ne garde que l'empreinte SHA-256, si bien qu'une fuite de la base ne livre aucun jeton utilisable. Le validator est renouvelé à chaque retour par le cookie, qui met aussi `last_login` à jour : c'est sur cette date que se mesure l'[inactivité d'un compte](vie-privee.md#comptes-inactifs).
+
+Un jeton disparaît :
+
+- à la déconnexion, pour l'appareil qui se déconnecte seulement ;
+- au changement de mot de passe, par le profil ou par une réinitialisation, pour **tous** les appareils du compte (`Sentry::revokeRememberedDevices()`). L'appareil depuis lequel la personne change le sien reçoit un jeton neuf ;
+- à l'anonymisation du compte ;
+- à son expiration, au fil des connexions suivantes ;
+- par « Se déconnecter des autres appareils », voir ci-dessous.
+
+## Se déconnecter des autres appareils
+
+Le profil (`user/dashboard.php`) dit sur combien d'appareils la connexion est mémorisée, et propose de fermer toutes les autres (`Sentry::logoutOtherDevices()`). Supprimer les jetons ne suffit pas : une session déjà ouverte sur un autre appareil survivrait jusqu'à une heure d'inactivité, et indéfiniment tant qu'on y navigue. Le compteur `personne.session_epoch`, copié en session à la connexion, est donc incrémenté ; `checkSession()` ferme toute session dont la copie ne correspond plus.
+
+L'appareil qui le demande reste connecté, avec un jeton neuf s'il était mémorisé. Un administrateur qui gère la fiche peut faire de même pour un compte compromis : le compte est alors déconnecté de tous ses appareils, sans que la session de l'administrateur soit touchée.
 
 ## Déconnexion
 
@@ -50,4 +72,4 @@ Le point d'entrée reste nécessaire — la session est côté serveur, le cooki
 
 Le jeton `form_token_user_logout` est déposé en session par `_header.inc.php` et vaut **pour toute la session**, et non par affichage comme sur `user/login.php` : le bouton « Sortir » est rendu sur toutes les pages, donc dans tous les onglets ouverts, et un jeton à usage unique bloquerait la déconnexion depuis un onglet resté en arrière-plan.
 
-`Sentry::logout()` efface aussi le cookie « Rester connecté-e ». Son `setcookie()` doit porter le `path` explicitement : sans lui, PHP retombe sur le répertoire du script appelant, donc `/user`, et le cookie posé sur `/` survit — Sentry rouvre alors une session à la requête suivante. Trois cas sont verrouillés dans `tests/Site/UserLogoutCest.php`, dont celui-là.
+`Sentry::logout()` efface aussi le cookie « Rester connecté-e » et le jeton de cet appareil. Son `setcookie()` doit porter le `path` explicitement : sans lui, PHP retombe sur le répertoire du script appelant, donc `/user`, et le cookie posé sur `/` survit — Sentry rouvre alors une session à la requête suivante. Trois cas sont verrouillés dans `tests/Site/UserLogoutCest.php`, dont celui-là.
